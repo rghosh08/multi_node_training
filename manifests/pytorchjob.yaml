@@ -1,0 +1,88 @@
+apiVersion: "kubeflow.org/v1"
+kind: PyTorchJob
+metadata:
+  name: sft-llama3-2-1b
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            app: sft-trainer
+        spec:
+          containers:
+            - name: pytorch
+              image: "${IMAGE}"
+              imagePullPolicy: Always
+              args:
+                - "--model_name=Qwen/Qwen3.5-0.8B"
+                - "--dataset_name=tatsu-lab/alpaca"
+                - "--epochs=3"
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: HF_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: hf-token-secret
+                      key: HF_TOKEN
+                - name: NCCL_DEBUG
+                  value: "INFO"
+              resources:
+                limits:
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                requests:
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                  memory: "32Gi"
+                  cpu: "8"
+              volumeMounts:
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: "16Gi"
+    Worker:
+      replicas: ${WORKER_REPLICAS}
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          labels:
+            app: sft-trainer
+        spec:
+          containers:
+            - name: pytorch
+              image: "${IMAGE}"
+              imagePullPolicy: Always
+              args:
+                - "--model_name=Qwen/Qwen3.5-0.8B"
+                - "--dataset_name=tatsu-lab/alpaca"
+                - "--epochs=3"
+              env:
+                - name: GPUS_PER_NODE
+                  value: "${GPUS_PER_NODE}"
+                - name: HF_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: hf-token-secret
+                      key: HF_TOKEN
+                - name: NCCL_DEBUG
+                  value: "INFO"
+              resources:
+                limits:
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                requests:
+                  nvidia.com/gpu: ${GPUS_PER_NODE}
+                  memory: "32Gi"
+                  cpu: "8"
+              volumeMounts:
+                - name: dshm
+                  mountPath: /dev/shm
+          volumes:
+            - name: dshm
+              emptyDir:
+                medium: Memory
+                sizeLimit: "16Gi"
