@@ -47,6 +47,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--per_device_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
+    parser.add_argument(
+        "--run_name",
+        type=str,
+        default=None,
+        help="Optional run name for experiment tracking",
+    )
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        default=None,
+        help="Optional Weights & Biases project name",
+    )
+    parser.add_argument(
+        "--wandb_entity",
+        type=str,
+        default=None,
+        help="Optional Weights & Biases entity/team name",
+    )
     return parser.parse_args()
 
 
@@ -94,6 +112,11 @@ def main() -> None:
         args.dataset_name,
         args.epochs,
     )
+
+    if args.wandb_project:
+        os.environ["WANDB_PROJECT"] = args.wandb_project
+    if args.wandb_entity:
+        os.environ["WANDB_ENTITY"] = args.wandb_entity
 
     # ── Tokenizer ──────────────────────────────────────────────
     tokenizer = AutoTokenizer.from_pretrained(
@@ -147,7 +170,8 @@ def main() -> None:
         gradient_checkpointing_kwargs={"use_reentrant": False},
         ddp_find_unused_parameters=False,
         dataloader_num_workers=2,
-        report_to="none",
+        report_to="wandb",
+        run_name=args.run_name,
         disable_tqdm=(rank != 0),
     )
 
